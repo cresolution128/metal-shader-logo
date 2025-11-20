@@ -106,9 +106,9 @@ export function parseLogoImage(file: File | string): Promise<{ imageData: ImageD
           } else {
             // Black/colored logo: transparent or pure white = background, colored = shape
             if ((r === 255 && g === 255 && b === 255 && a === 255) || a < 128) {
-              shapeMask[y * width + x] = false;
-            } else {
-              shapeMask[y * width + x] = true;
+            shapeMask[y * width + x] = false;
+          } else {
+            shapeMask[y * width + x] = true;
             }
           }
         }

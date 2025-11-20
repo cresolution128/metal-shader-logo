@@ -2,30 +2,24 @@
 
 import { Canvas } from '@/hero/canvas';
 import { defaultParams } from '@/hero/params';
+import { parseLogoImage } from '@/hero/parse-logo-image';
 import { useEffect, useState } from 'react';
-
-const APPLE_LOGO_ID = '01JMFPY99JXXKRQWDAHBY0ARQH';
 
 export default function Home() {
   const [imageData, setImageData] = useState<ImageData | null>(null);
   const [processing, setProcessing] = useState<boolean>(true);
 
   useEffect(() => {
+    // Clear URL parameters
+    if (typeof window !== 'undefined' && window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     setProcessing(true);
 
     async function loadImage() {
       try {
-        const res = await fetch(`https://p1ljtcp1ptfohfxm.public.blob.vercel-storage.com/${APPLE_LOGO_ID}.png`);
-        const blob = await res.blob();
-        const bitmap = await createImageBitmap(blob);
-
-        // Create a temporary canvas to turn the image back into imageData for the shader
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(bitmap, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const { imageData } = await parseLogoImage('/examples/apple-logo.svg');
         setImageData(imageData);
       } catch (error) {
         console.error(error);
