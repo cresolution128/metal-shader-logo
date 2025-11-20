@@ -57,10 +57,36 @@ export function parseLogoImage(file: File | string): Promise<{ imageData: ImageD
       shapeCtx.drawImage(img, 0, 0, width, height);
 
       // 1) Build the inside/outside mask:
-      // Non-shape pixels: pure white (255,255,255,255) or fully transparent.
-      // Everything else is part of a shape.
+      // Detect if the logo is white-on-transparent or black-on-transparent
       const shapeImageData = shapeCtx.getImageData(0, 0, width, height);
       const data = shapeImageData.data;
+      
+      // Sample pixels to detect logo type
+      let whiteOpaqueCount = 0;
+      let blackOpaqueCount = 0;
+      let transparentCount = 0;
+      const sampleSize = Math.min(10000, width * height);
+      const step = Math.floor((width * height) / sampleSize);
+      
+      for (var i = 0; i < width * height; i += step) {
+        var idx4 = i * 4;
+        var r = data[idx4];
+        var g = data[idx4 + 1];
+        var b = data[idx4 + 2];
+        var a = data[idx4 + 3];
+        
+        if (a < 128) {
+          transparentCount++;
+        } else if (r > 200 && g > 200 && b > 200) {
+          whiteOpaqueCount++;
+        } else {
+          blackOpaqueCount++;
+        }
+      }
+      
+      // If we have white opaque pixels and few black ones, it's a white logo
+      const isWhiteLogo = whiteOpaqueCount > blackOpaqueCount && whiteOpaqueCount > transparentCount * 0.1;
+      
       const shapeMask = new Array(width * height).fill(false);
       for (var y = 0; y < height; y++) {
         for (var x = 0; x < width; x++) {
@@ -69,10 +95,21 @@ export function parseLogoImage(file: File | string): Promise<{ imageData: ImageD
           var g = data[idx4 + 1];
           var b = data[idx4 + 2];
           var a = data[idx4 + 3];
-          if ((r === 255 && g === 255 && b === 255 && a === 255) || a === 0) {
-            shapeMask[y * width + x] = false;
+          
+          if (isWhiteLogo) {
+            // White logo: white opaque = shape, transparent = background
+            if (a > 128 && r > 200 && g > 200 && b > 200) {
+              shapeMask[y * width + x] = true;
+            } else {
+              shapeMask[y * width + x] = false;
+            }
           } else {
-            shapeMask[y * width + x] = true;
+            // Black/colored logo: transparent or pure white = background, colored = shape
+            if ((r === 255 && g === 255 && b === 255 && a === 255) || a < 128) {
+              shapeMask[y * width + x] = false;
+            } else {
+              shapeMask[y * width + x] = true;
+            }
           }
         }
       }
